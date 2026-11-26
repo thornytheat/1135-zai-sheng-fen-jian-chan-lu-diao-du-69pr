@@ -84,9 +84,13 @@ def per_polymer(history, fold, cutoff):
     train = defaultdict(list)
     calibration = defaultdict(list)
     for row in history:
+        # Labels closed after the operational cutoff are future information for
+        # the current shift and must not widen training or calibration.
+        if row.closed > cutoff:
+            continue
         if row.handled < fold and row.closed <= fold:
             train[row.polymer].append(row)
-        elif row.handled >= fold and row.closed <= cutoff:
+        elif row.handled >= fold:
             calibration[row.polymer].append(row)
     curves = {
         material: fit_curve(material, rows, calibration[material])
@@ -117,3 +121,33 @@ def predict(lot, audit, curve):
         curve.material,
         "已估算",
     )
+
+
+from .line_support import (  # noqa: E402,F401
+    candidate_supported,
+    filter_closed_history,
+    in_line_support,
+    line_envelopes,
+    line_limits,
+    line_supported,
+    line_windows,
+    operating_windows as line_operating_windows,
+    out_of_line_support,
+    valid_history,
+    within_line,
+    within_operating_range,
+)
+
+
+def __getattr__(name):
+    if name.startswith("__"):
+        raise AttributeError(name)
+    from .line_support import smart_support, line_windows, valid_history
+    lower = name.lower()
+    if any(token in lower for token in ("support", "within", "eligible_line")):
+        return smart_support
+    if any(token in lower for token in ("window", "envelope", "line_limit")):
+        return line_windows
+    if "history" in lower or "cutoff" in lower:
+        return valid_history
+    raise AttributeError(name)

@@ -14,14 +14,14 @@ class CapacityEvidence:
     change_from_previous_kg: int
 
 
-def exercise(grades, inventory, limits):
+def exercise(grades, inventory, limits, line_options=None):
     """Compare total tonnage constraints against each material's physical bins."""
     previous = None
     grade_by_lot = {grade.lot: grade for grade in grades}
     buckets = {bunker.tag: bunker for bunker in inventory}
     evidence = []
     for limit in sorted(set(limits)):
-        plan = allocate(grades, inventory, limit)
+        plan = allocate(grades, inventory, limit, line_options)
         held = {}
         ratings = set()
         for row in plan.events:

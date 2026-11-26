@@ -9,6 +9,8 @@ def evidence(shift, drift, signed):
             "预留（kg）": row.warehoused,
             "未分配预计出料（kg）": row.forecast_unassigned,
             "预计残渣（kg）": row.expected_residue,
+            "清线损耗（kg）": row.changeover_loss_kg,
+            "换线损耗（kg）": row.changeover_loss_kg,
         }
         for row in shift.lines
     ]

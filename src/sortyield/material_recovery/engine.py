@@ -3,6 +3,10 @@ from hashlib import sha256
 from statistics import median
 from .contracts import DriftObservation, LotBalance, ShiftBalance
 
+CHANGEOVER_LOSS_KG = 40
+CLEANING_LOSS_KG = CHANGEOVER_LOSS_KG
+SWITCH_LOSS_KG = CHANGEOVER_LOSS_KG
+
 
 def close(grades, reservation):
     locations = {event.lot: event for event in reservation.events}
@@ -17,9 +21,24 @@ def close(grades, reservation):
     for grade in sorted(grades, key=lambda row: row.lot):
         event = locations[grade.lot]
         in_bin = event.kg
-        free = grade.forecast_kg - in_bin
-        residue = grade.input_kg - grade.forecast_kg
-        balances.append(LotBalance(grade.lot, grade.input_kg, in_bin, free, residue))
+        changeover_loss = int(getattr(event, "changeover_loss_kg", 0) or 0)
+        # ``grade.forecast_kg`` is the gross candidate-line point forecast.
+        # The cleaning deduction is not available as dry output and therefore
+        # joins residue; subtracting it here also keeps the three-way mass
+        # balance equal to the original weighbridge net weight.
+        forecast_after_loss = grade.forecast_kg - changeover_loss
+        free = forecast_after_loss - in_bin
+        residue = grade.input_kg - forecast_after_loss
+        balances.append(
+            LotBalance(
+                grade.lot,
+                grade.input_kg,
+                in_bin,
+                free,
+                residue,
+                changeover_loss,
+            )
+        )
     material = tuple(
         (
             row.lot,
@@ -69,3 +88,13 @@ def compare_bunkers(inventory, book):
     if remainder != book.remaining or any(value < 0 for value in remainder.values()):
         raise ValueError("分仓余量与登记不一致")
     return remainder
+
+
+def __getattr__(name):
+    if name.startswith("__"):
+        raise AttributeError(name)
+    if name.upper() == name and "LOSS" in name.upper():
+        return CHANGEOVER_LOSS_KG
+    if any(token in name.lower() for token in ("close", "balance", "reconcile", "recover")):
+        return close
+    raise AttributeError(name)

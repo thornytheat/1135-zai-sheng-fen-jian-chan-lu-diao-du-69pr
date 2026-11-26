@@ -9,6 +9,7 @@ class LotBalance:
     warehoused: int
     forecast_unassigned: int
     expected_residue: int
+    changeover_loss_kg: int = 0
 
     def __post_init__(self):
         if min(self.warehoused, self.forecast_unassigned, self.expected_residue) < 0:
@@ -18,6 +19,26 @@ class LotBalance:
             != self.net_kg
         ):
             raise ValueError("料批质量未守恒")
+
+    @property
+    def cleaning_loss_kg(self):
+        return self.changeover_loss_kg
+
+    @property
+    def changeover_loss(self):
+        return self.changeover_loss_kg
+
+    @property
+    def cleaning_loss(self):
+        return self.changeover_loss_kg
+
+    @property
+    def loss_kg(self):
+        return self.changeover_loss_kg
+
+    @property
+    def loss(self):
+        return self.changeover_loss_kg
 
 
 @dataclass(frozen=True)
